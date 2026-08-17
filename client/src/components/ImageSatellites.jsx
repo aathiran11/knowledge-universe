@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 export default function ImageSatellites({ images = [] }) {
   const [lightbox, setLightbox] = useState(null);
-
   if (!images.length) return null;
 
   const radii = [150, 190, 230];
@@ -16,9 +15,7 @@ export default function ImageSatellites({ images = [] }) {
           const duration = durations[i % durations.length];
           const startAngle = (360 / images.length) * i;
           const reverse = i % 2 === 1;
-
           return (
-            // Layer 1: rotates around the planet center (orbit motion)
             <div
               key={src}
               className="absolute top-1/2 left-1/2"
@@ -27,9 +24,7 @@ export default function ImageSatellites({ images = [] }) {
                 transform: `rotate(${startAngle}deg)`,
               }}
             >
-              {/* Layer 2: pushes the thumbnail out to its orbit radius */}
               <div style={{ transform: `translateX(${radius}px)` }}>
-                {/* Layer 3: counter-rotates at the same speed so the thumbnail stays upright */}
                 <div
                   className="pointer-events-auto"
                   style={{
@@ -49,24 +44,18 @@ export default function ImageSatellites({ images = [] }) {
           );
         })}
       </div>
-
       <style>{`
         @keyframes orbit-rotate {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
       `}</style>
-
       {lightbox && (
         <div
           className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-8"
           onClick={() => setLightbox(null)}
         >
-          <img
-            src={lightbox}
-            alt=""
-            className="max-w-2xl max-h-[80vh] rounded-lg border border-white/20 shadow-2xl"
-          />
+          <img src={lightbox} alt="" className="max-w-2xl max-h-[80vh] rounded-lg border border-white/20 shadow-2xl" />
         </div>
       )}
     </>

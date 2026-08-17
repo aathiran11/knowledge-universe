@@ -1,8 +1,5 @@
 export default function ConnectionLines({ count, color }) {
   if (!count) return null;
-
-  // Simple decorative animated lines radiating downward from the planet toward
-  // the "connected planets" row below it. Purely visual — positions are approximate.
   return (
     <svg
       className="absolute left-1/2 pointer-events-none"
@@ -15,26 +12,14 @@ export default function ConnectionLines({ count, color }) {
         return (
           <line
             key={i}
-            x1="200"
-            y1="0"
-            x2={x2}
-            y2="130"
-            stroke={color}
-            strokeWidth="1"
-            strokeDasharray="4 6"
-            opacity="0.4"
-            style={{
-              animation: `dash-flow 1.2s linear infinite`,
-              animationDelay: `${i * 0.15}s`,
-            }}
+            x1="200" y1="0" x2={x2} y2="130"
+            stroke={color} strokeWidth="1" strokeDasharray="4 6" opacity="0.4"
+            style={{ animation: `dash-flow 1.2s linear infinite`, animationDelay: `${i * 0.15}s` }}
           />
         );
       })}
       <style>{`
-        @keyframes dash-flow {
-          from { stroke-dashoffset: 20; }
-          to { stroke-dashoffset: 0; }
-        }
+        @keyframes dash-flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
       `}</style>
     </svg>
   );

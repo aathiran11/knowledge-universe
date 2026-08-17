@@ -12,7 +12,6 @@ function slugify(title) {
   return title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-// GET /api/topics/random
 router.get('/random', async (req, res) => {
   try {
     const count = await Topic.countDocuments();
@@ -24,25 +23,21 @@ router.get('/random', async (req, res) => {
   }
 });
 
-// GET /api/topics/search?q=
 router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     if (!q) return res.json([]);
-    const results = await Topic.find({ title: { $regex: q, $options: 'i' } })
-      .limit(8).select('slug title color');
+    const results = await Topic.find({ title: { $regex: q, $options: 'i' } }).limit(8).select('slug title color');
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: 'Search failed' });
   }
 });
 
-// POST /api/topics  (admin: create)
 router.post('/', async (req, res) => {
   try {
     const { title, tagline, color, related, images, videoUrl } = req.body;
     if (!title || !tagline) return res.status(400).json({ error: 'title and tagline are required' });
-
     const slug = slugify(title);
     const topic = await Topic.findOneAndUpdate(
       { slug },
@@ -55,7 +50,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/topics/:slug  (admin: update)
 router.put('/:slug', async (req, res) => {
   try {
     const { title, tagline, color, related, images, videoUrl } = req.body;
@@ -71,7 +65,6 @@ router.put('/:slug', async (req, res) => {
   }
 });
 
-// DELETE /api/topics/:slug  (admin: delete)
 router.delete('/:slug', async (req, res) => {
   try {
     const result = await Topic.findOneAndDelete({ slug: req.params.slug.toLowerCase() });
@@ -82,7 +75,6 @@ router.delete('/:slug', async (req, res) => {
   }
 });
 
-// GET /api/topics/:slug  (falls back to Wikipedia, then DuckDuckGo, and caches result if not found locally)
 router.get('/:slug', async (req, res) => {
   try {
     const slug = req.params.slug.toLowerCase();
@@ -93,23 +85,17 @@ router.get('/:slug', async (req, res) => {
     const palette = ['#c2410c', '#0891b2', '#7c3aed', '#16a34a', '#db2777', '#0d9488', '#eab308', '#dc2626', '#2563eb', '#9333ea', '#059669', '#0284c7', '#e11d48', '#f97316', '#65a30d'];
     const color = palette[Math.abs(hashCode(slug)) % palette.length];
 
-    // Layer 1: Wikipedia (best coverage for people/places/history/science, free, no key)
     const wiki = await tryWikipedia(title);
     if (wiki) {
       topic = await Topic.create({ slug, title: wiki.title, tagline: wiki.tagline, color, images: wiki.images, related: wiki.related || [] });
       return res.json(topic);
     }
 
-    // Layer 2: DuckDuckGo Instant Answer (free, no key, weaker coverage — catches some things Wikipedia misses)
     const ddg = await tryDuckDuckGo(title);
     if (ddg) {
       topic = await Topic.create({ slug, title: ddg.title, tagline: ddg.tagline, color, images: ddg.images, related: ddg.related || [] });
       return res.json(topic);
     }
-
-    // Layer 3 (not implemented): a real web search API (Google Custom Search / Bing / SerpAPI)
-    // would go here if you add an API key later — see README for notes. Without one,
-    // free sources only cover a subset of what a full search engine would.
 
     return res.status(404).json({ error: 'Topic not found' });
   } catch (err) {
@@ -119,9 +105,6 @@ router.get('/:slug', async (req, res) => {
 });
 
 async function tryWikipedia(title) {
-  // Step 1: resolve the best-matching real Wikipedia title via search — this handles
-  // casing, nicknames, and partial matches (e.g. "thalapathy vijay" -> "Vijay (actor)")
-  // that a naive direct summary lookup would miss.
   const searchRes = await fetch(
     `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(title)}&format=json&srlimit=1&origin=*`,
     { headers: { 'User-Agent': 'KnowledgeUniverseProject/1.0 (educational portfolio project)' } }
@@ -131,13 +114,11 @@ async function tryWikipedia(title) {
   const bestMatch = searchData?.query?.search?.[0]?.title;
   if (!bestMatch) return null;
 
-  // Step 2: fetch the real summary using the resolved, correctly-cased title.
   const summaryRes = await fetch(
     `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bestMatch)}`,
     { headers: { 'User-Agent': 'KnowledgeUniverseProject/1.0 (educational portfolio project)' } }
   );
   if (!summaryRes.ok) return null;
-
   const summary = await summaryRes.json();
   if (summary.type === 'disambiguation' || !summary.extract) return null;
 
@@ -168,14 +149,15 @@ async function tryWikipedia(title) {
   };
 }
 
-// Combines two strategies so "related" is almost never empty:
-// 1. Real outgoing links from the article (best relevance when the page has enough of them)
-// 2. Wikipedia's "morelike" search, which finds textually similar articles by content —
-//    works even for stats/table-heavy pages that have few in-body wikilinks.
+const LINK_NOISE_PATTERNS = [
+  /^list of /i, /^index of /i, /^outline of /i, /^wikipedia:/i, /^template:/i,
+  /^category:/i, /^portal:/i, /^help:/i, /^international standard/i,
+  /^iso \d/i, /\(disambiguation\)$/i, /^geographic coordinate/i,
+];
+
 async function fetchRelated(title) {
   const fromLinks = await fetchRelatedLinks(title).catch(() => []);
   if (fromLinks.length >= 3) return fromLinks;
-
   const fromSimilar = await fetchMoreLike(title).catch(() => []);
   const combined = [...fromLinks];
   for (const slug of fromSimilar) {
@@ -193,18 +175,12 @@ async function fetchMoreLike(title) {
   const data = await res.json();
   const pages = data?.query?.pages;
   if (!pages) return [];
-
   return Object.values(pages)
     .map((p) => p.title)
     .filter((t) => t && !LINK_NOISE_PATTERNS.some((re) => re.test(t)))
     .slice(0, 5)
     .map((t) => slugify(t));
 }
-const LINK_NOISE_PATTERNS = [
-  /^list of /i, /^index of /i, /^outline of /i, /^wikipedia:/i, /^template:/i,
-  /^category:/i, /^portal:/i, /^help:/i, /^international standard/i,
-  /^iso \d/i, /\(disambiguation\)$/i, /^geographic coordinate/i,
-];
 
 async function fetchRelatedLinks(title) {
   const res = await fetch(
@@ -212,45 +188,31 @@ async function fetchRelatedLinks(title) {
     { headers: { 'User-Agent': 'KnowledgeUniverseProject/1.0 (educational portfolio project)' } }
   );
   if (!res.ok) return [];
-
   const data = await res.json();
   const pages = data?.query?.pages;
   if (!pages) return [];
-
   const links = Object.values(pages)
     .flatMap((p) => p.links || [])
     .map((l) => l.title)
     .filter((t) => t && !LINK_NOISE_PATTERNS.some((re) => re.test(t)))
     .filter((t) => t.length > 2 && t.length < 60);
-
-  // Take a handful spread across the list rather than just the first few (which tend
-  // to be generic terms like "Latin" or "Common Era" near the top of many articles).
   const picked = [];
   const step = Math.max(1, Math.floor(links.length / 5));
   for (let i = 0; i < links.length && picked.length < 5; i += step) {
     picked.push(links[i]);
   }
-
   return picked.map((t) => slugify(t));
 }
 
 async function tryDuckDuckGo(title) {
-  const res = await fetch(
-    `https://api.duckduckgo.com/?q=${encodeURIComponent(title)}&format=json&no_html=1&skip_disambig=1`
-  );
+  const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(title)}&format=json&no_html=1&skip_disambig=1`);
   if (!res.ok) return null;
   const data = await res.json();
-
   const abstract = data.AbstractText || data.Answer || '';
   if (!abstract) return null;
-
   const resolvedTitle = data.Heading || title;
   const tagline = abstract.split('. ').slice(0, 2).join('. ') + (abstract.includes('. ') ? '.' : '');
-
-  // Even though the summary came from DDG, Wikipedia often still has a page for the
-  // same title we can pull outgoing links from — try it so connections aren't empty.
   const related = await fetchRelated(resolvedTitle).catch(() => []);
-
   return {
     title: resolvedTitle,
     tagline,
@@ -268,7 +230,6 @@ function hashCode(str) {
   return hash;
 }
 
-// GET /api/topics  (list all)
 router.get('/', async (req, res) => {
   try {
     const all = await Topic.find().select('slug title color').sort({ title: 1 });

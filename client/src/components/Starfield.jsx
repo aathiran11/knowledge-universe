@@ -6,7 +6,6 @@ function DriftingCamera({ warping }) {
   const zRef = useRef(5);
   useFrame(({ clock, camera }) => {
     const t = clock.getElapsedTime();
-
     if (warping) {
       zRef.current -= 0.55;
       camera.position.x += (0 - camera.position.x) * 0.1;
@@ -30,18 +29,14 @@ function DriftingCamera({ warping }) {
 function RotatingStars({ warping }) {
   const groupRef = useRef();
   const scaleRef = useRef(1);
-
   useFrame((_, delta) => {
     if (groupRef.current) {
       groupRef.current.rotation.y += delta * (warping ? 0.15 : 0.01);
-
-      // Stretch stars along z-axis during warp to read as motion streaks, not a burst.
       const targetScale = warping ? 3.2 : 1;
       scaleRef.current += (targetScale - scaleRef.current) * 0.08;
       groupRef.current.scale.set(1, 1, scaleRef.current);
     }
   });
-
   return (
     <group ref={groupRef}>
       <Stars radius={100} depth={50} count={4000} factor={4} saturation={0} fade speed={warping ? 3 : 1} />

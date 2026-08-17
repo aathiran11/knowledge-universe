@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import Starfield from './components/Starfield.jsx';
 import Planet from './components/Planet.jsx';
+import { API_BASE } from './config.js';
 
 export default function App() {
   const [status, setStatus] = useState('checking...');
-  const [phase, setPhase] = useState('search'); // 'search' | 'warping' | 'planet'
+  const [phase, setPhase] = useState('search');
   const [query, setQuery] = useState('');
   const [activeTopic, setActiveTopic] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
@@ -13,26 +14,22 @@ export default function App() {
   const debounceRef = useRef(null);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/health')
+    axios.get(`${API_BASE}/api/health`)
       .then(res => setStatus(res.data.message))
       .catch(() => setStatus('Backend not reachable'));
   }, []);
 
-  // Debounced live search-as-you-type
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-
     if (!query.trim()) {
       setSuggestions([]);
       return;
     }
-
     debounceRef.current = setTimeout(() => {
-      axios.get(`http://localhost:5000/api/topics/search`, { params: { q: query.trim() } })
+      axios.get(`${API_BASE}/api/topics/search`, { params: { q: query.trim() } })
         .then((res) => setSuggestions(res.data))
         .catch(() => setSuggestions([]));
     }, 250);
-
     return () => clearTimeout(debounceRef.current);
   }, [query]);
 
@@ -53,8 +50,6 @@ export default function App() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    // If there are suggestions and the exact typed text doesn't match a slug,
-    // prefer the first suggestion so typos/partial words still land somewhere real.
     if (suggestions.length > 0) {
       explore(suggestions[0].slug);
     } else {
@@ -82,17 +77,13 @@ export default function App() {
             <input
               type="text"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setShowSuggestions(true);
-              }}
+              onChange={(e) => { setQuery(e.target.value); setShowSuggestions(true); }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               placeholder="Search any topic, person, or place..."
               className="w-80 h-10 bg-white/5 border border-white/20 rounded-lg px-4 text-sm text-white placeholder-gray-500 outline-none focus:border-white/40"
               autoFocus
             />
-
             {showSuggestions && suggestions.length > 0 && (
               <div className="absolute top-12 left-0 w-80 bg-black/90 border border-white/15 rounded-lg overflow-hidden backdrop-blur-sm">
                 {suggestions.map((s) => (
@@ -102,20 +93,14 @@ export default function App() {
                     onMouseDown={() => explore(s.slug)}
                     className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-white/10 flex items-center gap-2"
                   >
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: s.color }}
-                    />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
                     {s.title}
                   </button>
                 ))}
               </div>
             )}
           </form>
-
-          <p className="text-xs text-gray-600 mt-4">
-            Powered by Wikipedia — search anything that has a Wikipedia article
-          </p>
+          <p className="text-xs text-gray-600 mt-4">Powered by Wikipedia — search anything that has a Wikipedia article</p>
         </div>
       )}
 

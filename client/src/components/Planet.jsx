@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import ImageSatellites from './ImageSatellites.jsx';
 import ConnectionLines from './ConnectionLines.jsx';
+import { API_BASE } from '../config.js';
 
 const FALLBACK = {
   title: 'No results',
@@ -22,14 +23,14 @@ export default function Planet({ topicKey, onTravel, onBack }) {
     setLoading(true);
     setShowVideo(false);
 
-    axios.get(`http://localhost:5000/api/topics/${topicKey}`)
+    axios.get(`${API_BASE}/api/topics/${topicKey}`)
       .then(async (res) => {
         if (cancelled) return;
         const t = res.data;
         setTopic(t);
 
         const relPromises = (t.related || []).map((slug) =>
-          axios.get(`http://localhost:5000/api/topics/${slug}`)
+          axios.get(`${API_BASE}/api/topics/${slug}`)
             .then((r) => ({ slug, title: r.data.title }))
             .catch(() => ({ slug, title: slug }))
         );
@@ -60,18 +61,10 @@ export default function Planet({ topicKey, onTravel, onBack }) {
 
       <div className="relative w-56 h-56 mb-6 flex items-center justify-center">
         <ImageSatellites images={topic.images || []} />
-
-        <div
-          className="absolute inset-0 rounded-full border border-white/10"
-          style={{ transform: 'rotateX(70deg)' }}
-        />
+        <div className="absolute inset-0 rounded-full border border-white/10" style={{ transform: 'rotateX(70deg)' }} />
         <div
           className="absolute w-3 h-3 rounded-full"
-          style={{
-            background: '#fff',
-            boxShadow: '0 0 8px 2px rgba(255,255,255,0.8)',
-            animation: 'orbit 6s linear infinite',
-          }}
+          style={{ background: '#fff', boxShadow: '0 0 8px 2px rgba(255,255,255,0.8)', animation: 'orbit 6s linear infinite' }}
         />
         <button
           onClick={() => topic.videoUrl && setShowVideo(true)}
@@ -81,17 +74,8 @@ export default function Planet({ topicKey, onTravel, onBack }) {
             boxShadow: `0 0 70px ${topic.color}66, inset -14px -10px 30px rgba(0,0,0,0.6), inset 8px 6px 20px rgba(255,255,255,0.08)`,
             cursor: topic.videoUrl ? 'pointer' : 'default',
           }}
-          title={topic.videoUrl ? 'Play video' : undefined}
         />
-        <div
-          className="absolute w-36 h-36 rounded-full pointer-events-none"
-          style={{ boxShadow: `0 0 40px 6px ${topic.color}33` }}
-        />
-        {topic.videoUrl && (
-          <div className="absolute bottom-0 text-[10px] text-gray-500 tracking-wide pointer-events-none">
-            click planet to play video
-          </div>
-        )}
+        <div className="absolute w-36 h-36 rounded-full pointer-events-none" style={{ boxShadow: `0 0 40px 6px ${topic.color}33` }} />
       </div>
 
       <h1 className="text-2xl font-semibold mb-3 tracking-wide">{topic.title}</h1>
@@ -122,18 +106,9 @@ export default function Planet({ topicKey, onTravel, onBack }) {
       </button>
 
       {showVideo && topic.videoUrl && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8"
-          onClick={() => setShowVideo(false)}
-        >
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8" onClick={() => setShowVideo(false)}>
           <div className="w-full max-w-2xl aspect-video" onClick={(e) => e.stopPropagation()}>
-            <iframe
-              src={topic.videoUrl}
-              className="w-full h-full rounded-lg border border-white/20"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title="Topic video"
-            />
+            <iframe src={topic.videoUrl} className="w-full h-full rounded-lg border border-white/20" allow="autoplay; encrypted-media" allowFullScreen title="Topic video" />
           </div>
         </div>
       )}

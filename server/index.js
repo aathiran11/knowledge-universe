@@ -5,7 +5,11 @@ const cors = require('cors');
 const topicRoutes = require('./routes/topics');
 
 const app = express();
-app.use(cors());
+
+// In production, set FRONTEND_URL to your deployed frontend's URL (e.g. Vercel) so only
+// that origin can call the API. Falls back to allowing everything for local dev.
+const allowedOrigin = process.env.FRONTEND_URL || '*';
+app.use(cors({ origin: allowedOrigin }));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
