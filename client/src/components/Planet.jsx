@@ -12,7 +12,7 @@ const FALLBACK = {
   images: [],
 };
 
-export default function Planet({ topicKey, onTravel, onBack }) {
+export default function Planet({ topicKey, onTravel, onBack, onGoBack, canGoBack }) {
   const [topic, setTopic] = useState(null);
   const [relatedTopics, setRelatedTopics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,12 +98,22 @@ export default function Planet({ topicKey, onTravel, onBack }) {
         </>
       )}
 
-      <button
-        onClick={onBack}
-        className="text-xs text-gray-500 border border-white/10 rounded-lg px-4 py-2 hover:text-gray-300 hover:border-white/30 transition-colors"
-      >
-        New search
-      </button>
+      <div className="flex gap-3">
+        {canGoBack && (
+          <button
+            onClick={onGoBack}
+            className="text-xs text-gray-400 border border-white/15 rounded-lg px-4 py-2 hover:text-gray-200 hover:border-white/40 transition-colors flex items-center gap-1"
+          >
+            ← Back
+          </button>
+        )}
+        <button
+          onClick={onBack}
+          className="text-xs text-gray-500 border border-white/10 rounded-lg px-4 py-2 hover:text-gray-300 hover:border-white/30 transition-colors"
+        >
+          New search
+        </button>
+      </div>
 
       {showVideo && topic.videoUrl && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8" onClick={() => setShowVideo(false)}>

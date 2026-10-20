@@ -9,6 +9,7 @@ export default function App() {
   const [phase, setPhase] = useState('search');
   const [query, setQuery] = useState('');
   const [activeTopic, setActiveTopic] = useState(null);
+  const [history, setHistory] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef(null);
@@ -41,9 +42,22 @@ export default function App() {
     const key = slugify(term);
     if (!key) return;
     setShowSuggestions(false);
+    setHistory((prev) => (activeTopic ? [...prev, activeTopic] : prev));
     setPhase('warping');
     setTimeout(() => {
       setActiveTopic(key);
+      setPhase('planet');
+    }, 1400);
+  }
+
+  function goBack() {
+    if (history.length === 0) return;
+    const prevTopic = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setShowSuggestions(false);
+    setPhase('warping');
+    setTimeout(() => {
+      setActiveTopic(prevTopic);
       setPhase('planet');
     }, 1400);
   }
@@ -62,6 +76,7 @@ export default function App() {
     setQuery('');
     setActiveTopic(null);
     setSuggestions([]);
+    setHistory([]);
   }
 
   return (
@@ -111,7 +126,13 @@ export default function App() {
       )}
 
       {phase === 'planet' && (
-        <Planet topicKey={activeTopic} onTravel={explore} onBack={handleBack} />
+        <Planet
+          topicKey={activeTopic}
+          onTravel={explore}
+          onBack={handleBack}
+          onGoBack={goBack}
+          canGoBack={history.length > 0}
+        />
       )}
     </div>
   );
